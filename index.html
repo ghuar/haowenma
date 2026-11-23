@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>好问吗 · 提问结构优化器</title>
+<style>
+:root{--ink:#111827;--sub:#6B7280;--line:#E5E7EB;--main:#1F3A5F;--accent:#C2410C}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+color:var(--ink);background:#F7F7F5;line-height:1.7;font-size:15px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:600px;margin:0 auto;min-height:100vh;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.05)}
+header{padding:16px 20px 10px;display:flex;align-items:baseline;gap:10px;
+border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:20}
+.brand{font-size:19px;font-weight:700;letter-spacing:.5px;color:var(--main)}
+.brand small{font-size:11px;color:var(--sub);letter-spacing:1px;font-weight:400}
+main{padding:20px 20px 44px}
+.view{display:none}
+.view.active{display:block;animation:fade .22s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+h1{font-size:25px;line-height:1.4;margin:4px 0 8px;letter-spacing:.5px}
+h1 em{font-style:normal;color:var(--accent)}
+.lead{color:var(--sub);font-size:14px;margin:0 0 20px}
+.sec-label{font-size:12px;color:var(--sub);letter-spacing:1.6px;margin:20px 0 8px}
+.scenes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.scene{border:1px solid var(--line);border-radius:10px;padding:11px 6px;text-align:center;
+font-size:13px;cursor:pointer;background:#fff;transition:.16s;user-select:none}
+.scene.on{border-color:var(--main);background:#F2F5F9;color:var(--main);font-weight:600}
+.ta-wrap{margin-top:18px;border:1px solid var(--line);border-radius:12px;padding:14px 14px 6px;background:#fff;transition:.16s}
+.ta-wrap:focus-within{border-color:var(--main);box-shadow:0 0 0 3px rgba(31,58,95,.06)}
+textarea{width:100%;border:0;outline:0;resize:vertical;min-height:112px;font-size:15px;
+line-height:1.7;font-family:inherit;color:var(--ink);background:transparent;padding:0}
+textarea::placeholder{color:#B6BCC6}
+.ta-foot{display:flex;justify-content:space-between;align-items:center;border-top:1px dashed var(--line);
+padding:8px 0 4px;margin-top:8px;font-size:12px;color:var(--sub)}
+.count.low{color:#B45309}
+.btn{display:block;width:100%;border:0;border-radius:10px;padding:14px;font-size:16px;
+font-family:inherit;font-weight:600;cursor:pointer;transition:.16s;margin-top:12px}
+.btn-main{background:var(--main);color:#fff}
+.btn-main:disabled{background:#C9CED6;cursor:not-allowed}
+.btn-ghost{background:#fff;color:var(--main);border:1px solid var(--line);font-weight:500;font-size:14px}
+.btn-sm{font-size:13px;padding:11px}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.samples{margin-top:22px;border-top:1px solid var(--line);padding-top:14px}
+.samples h3{font-size:13px;font-weight:600;margin:0 0 4px}
+.samples .hint{font-size:12px;color:var(--sub);margin:0 0 10px}
+.sample-item{border-left:3px solid #D8DEE7;padding:6px 0 6px 10px;margin-bottom:8px;
+font-size:13px;color:#374151;cursor:pointer;transition:.16s}
+.sample-item:hover{border-left-color:var(--main);background:#FAFBFC}
+.sample-item b{color:var(--main);font-weight:600}
+.score-head{display:flex;align-items:center;gap:14px}
+.score-num{font-size:43px;font-weight:700;line-height:1;color:var(--main);letter-spacing:-1px}
+.score-num small{font-size:13px;font-weight:400;color:var(--sub);margin-left:2px}
+.tag{display:inline-block;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;color:#fff}
+.tag.t1{background:#B91C1C}.tag.t2{background:#B45309}.tag.t3{background:#1D4ED8}.tag.t4{background:#166534}
+.verdict{margin:14px 0 4px;font-size:14.5px;background:#F7F7F5;border-left:3px solid var(--main);
+padding:10px 12px;border-radius:0 8px 8px 0}
+canvas#radar{width:100%;display:block;margin:8px 0 2px}
+.item{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden;background:#fff}
+.item-head{display:flex;align-items:center;gap:9px;padding:12px 13px;cursor:pointer;user-select:none}
+.item-name{font-size:14px;font-weight:600;flex:1}
+.bar{width:66px;height:6px;background:#EEF0F3;border-radius:3px;overflow:hidden;flex:none}
+.bar i{display:block;height:100%;border-radius:3px;transition:width .45s ease}
+.st{font-size:11.5px;padding:2px 7px;border-radius:5px;font-weight:600;white-space:nowrap;flex:none}
+.st.full{background:#DCFCE7;color:#166534}
+.st.part{background:#FEF3C7;color:#B45309}
+.st.none{background:#FEE2E2;color:#B91C1C}
+.item-body{padding:0 13px 13px;display:none;color:#374151;font-size:13.5px}
+.item.open .item-body{display:block}
+.kv{margin-top:9px}
+.kv b{color:var(--ink)}
+.kv p{margin:2px 0 0}
+mark{background:#FDE68A;padding:0 2px;border-radius:2px;color:#7C2D12}
+.alert{border-radius:10px;padding:10px 12px;font-size:13px;margin:9px 0}
+.alert.warn{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E}
+.alert.bad{background:#FEF2F2;border:1px solid #FECACA;color:#991B1B}
+.tabs{display:flex;gap:5px;background:#F1F2F4;padding:4px;border-radius:10px;margin:4px 0 14px}
+.tab{flex:1;text-align:center;padding:9px;font-size:14px;border-radius:8px;cursor:pointer;
+color:var(--sub);font-weight:500;transition:.16s;user-select:none}
+.tab.on{background:#fff;color:var(--main);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.prompt-out{border:1px solid var(--line);border-radius:12px;padding:15px;background:#FCFCFB;
+font-size:14.5px;line-height:1.95;white-space:pre-wrap;word-break:break-word;max-height:44vh;overflow:auto}
+.prompt-out .add{background:#DCFCE7;border-radius:3px;padding:1px 2px;color:#14532D}
+.prompt-out .keep{background:#FEF3C7;border-radius:3px;padding:1px 2px;color:#78350F}
+.changes{margin-top:13px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.changes h4{margin:0 0 6px;font-size:12.5px;color:var(--sub);font-weight:600;letter-spacing:.5px}
+.changes li{font-size:13.5px;margin-left:-14px;line-height:1.8}
+.follow{margin-top:16px}
+.follow h4{font-size:12.5px;color:var(--sub);margin:0 0 8px;font-weight:600;letter-spacing:.5px}
+.follow-item{border:1px dashed var(--line);border-radius:9px;padding:10px 12px;font-size:13.5px;
+margin-bottom:7px;cursor:pointer;color:#374151;transition:.16s}
+.follow-item:hover{border-color:var(--main);background:#F8FAFC}
+.follow-item i{color:var(--main);font-style:normal;font-weight:700;margin-right:5px}
+.book-empty{text-align:center;color:var(--sub);padding:44px 0;font-size:14px}
+.rec{border:1px solid var(--line);border-radius:10px;padding:12px 13px;margin-bottom:9px;background:#fff}
+.rec-top{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.rec-top .s{font-weight:700;color:var(--main);font-size:15px}
+.rec-raw{font-size:13px;color:#4B5563;margin:5px 0 0;display:-webkit-box;-webkit-line-clamp:2;
+-webkit-box-orient:vertical;overflow:hidden}
+.rec-meta{font-size:11.5px;color:#9CA3AF;margin-top:5px}
+canvas#trend{width:100%;display:block;margin:10px 0 4px}
+.footnote{font-size:11.5px;color:#9CA3AF;margin-top:24px;line-height:1.7;
+border-top:1px solid var(--line);padding-top:12px}
+.back{display:inline-block;font-size:13px;color:var(--sub);cursor:pointer;margin-bottom:8px;user-select:none}
+.toast{position:fixed;left:50%;bottom:38px;transform:translateX(-50%) translateY(10px);
+background:#111827;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;
+opacity:0;pointer-events:none;transition:.24s;z-index:99}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><span class="brand">好问吗</span><small>提问结构优化器</small></header>
+<main>
+
+<div class="view active" id="v-input">
+  <h1>问之前，<br>先问一句<em>好问吗</em></h1>
+  <p class="lead">粘一句你平时会发给 AI 的话，30 秒告诉你结构缺哪一块。</p>
+  <div class="sec-label">先选个场景</div>
+  <div class="scenes" id="scenes">
+    <div class="scene" data-s="开题报告">开题报告</div>
+    <div class="scene" data-s="课程论文">课程论文</div>
+    <div class="scene" data-s="实验报告">实验报告</div>
+    <div class="scene" data-s="教案设计">教案设计</div>
+    <div class="scene" data-s="英语写作">英语写作</div>
+    <div class="scene" data-s="其他问题">其他问题</div>
+  </div>
+  <div class="ta-wrap">
+    <textarea id="input" placeholder="例如：帮我写个论文引言"></textarea>
+    <div class="ta-foot"><span>别修饰，就写你平时怎么问</span><span class="count" id="count">0 字</span></div>
+  </div>
+  <button class="btn btn-main" id="btn-check" disabled>检查我的提问</button>
+  <div class="btn-row">
+    <button class="btn btn-ghost btn-sm" id="btn-book">我的提问本</button>
+    <button class="btn btn-ghost btn-sm" id="btn-clear">清空</button>
+  </div>
+  <div class="samples">
+    <h3>看看别人怎么问</h3>
+    <p class="hint">以下为示例样本，点一下可填进输入框对照</p>
+    <div id="sample-list"></div>
+  </div>
+</div>
+
+<div class="view" id="v-result">
+  <span class="back" id="back-input">← 返回修改</span>
+  <div class="score-head">
+    <div class="score-num" id="r-total">0<small>/100</small></div>
+    <span class="tag" id="r-tag">—</span>
+  </div>
+  <canvas id="radar"></canvas>
+  <div class="verdict" id="r-verdict"></div>
+  <div id="r-alerts"></div>
+  <div class="sec-label">逐项判定</div>
+  <div id="r-items"></div>
+  <button class="btn btn-main" id="btn-opt">一键优化</button>
+</div>
+<div class="view" id="v-opt">
+  <span class="back" id="back-res">← 回到诊断</span>
+  <div class="tabs">
+    <div class="tab on" data-t="light">轻改 · 补齐结构</div>
+    <div class="tab" data-t="rewrite">重写 · 重组表达</div>
+  </div>
+  <div class="prompt-out" id="opt-text"></div>
+  <div class="changes">
+    <h4>本次改了什么</h4>
+    <ol id="opt-changes"></ol>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-main btn-sm" id="btn-copy">复制全文</button>
+    <button class="btn btn-ghost btn-sm" id="btn-recheck">拿它再测一次</button>
+  </div>
+  <div class="follow">
+    <h4>接下来可以问</h4>
+    <div id="follow-list"></div>
+  </div>
+  <div class="footnote">绿底为新增的结构要素，黄底为你原句保留的部分。工具只优化提问方式，不代写正文。</div>
+</div>
+<div class="view" id="v-book">
+  <span class="back" id="back-input2">← 返回</span>
+  <h1 style="font-size:20px;margin:0 0 2px">我的提问本</h1>
+  <p class="lead" style="font-size:13px;margin-bottom:10px">每次检查过的话都留在这里，看结构分有没有往上走。</p>
+  <canvas id="trend"></canvas>
+  <div id="book-list"></div>
+  <div class="btn-row">
+    <button class="btn btn-ghost btn-sm" id="btn-export">导出记录</button>
+    <button class="btn btn-ghost btn-sm" id="btn-wipe">清空本机记录</button>
+  </div>
+  <div class="footnote">记录只存在这台设备的浏览器里，不上传任何服务器。</div>
+</div>
+</main>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+"use strict";
+var $ = function(id){ return document.getElementById(id); };
+var state = { scene:"", raw:"", res:null, tab:"light", out:null };
+
+var SCENES = {
+  "开题报告": { role:"一位本科论文答辩组的评审老师", fmt:"请分三部分输出：选题价值、可行性、改进方向", cons:"不超过 400 字，只围绕我的专业范围" },
+  "课程论文": { role:"一位严格的期刊审稿人", fmt:"请分四点输出，每点不超过 3 行", cons:"不要使用“赋能”“抓手”这类套话" },
+  "实验报告": { role:"一位实验室的指导教师", fmt:"请按“现象—原因—改进”三段输出", cons:"只针对我给出的数据，不要补充未测量的指标" },
+  "教案设计": { role:"一位有十年经验的中学学科教研员", fmt:"请用表格输出：环节、教师活动、学生活动、时长", cons:"只针对本学段，不要跨年级设计" },
+  "英语写作": { role:"一位雅思写作考官", fmt:"请先给评分，再逐条给修改建议", cons:"不要整段重写，只标出最该改的五处" },
+  "其他问题": { role:"一位熟悉这个领域的同行", fmt:"请分点输出，每点一句话", cons:"不确定的地方请直接说明，不要编造" }
+};
+var ROLE_RE = /(你是|请您?作为|作为[一]?[名位个]|扮演|充当|以.{0,10}身份)/;
+var ROLE_W = ['老师','导师','教授','专家','审稿人','编辑','教研员','考官','面试官','工程师','医生','律师','学长','评委','顾问'];
+var FIELD_W = ['统计','教育','计算机','文学','数学','英语','物理','化学','生物','经济','管理','历史','心理','医学','法律','数据','设计','新闻'];
+var VERB_W = ['生成','写','改写','压缩','扩写','列出','列','对比','评估','检查','翻译','总结','拆解','排序','推荐','设计','分析','润色','修改','解释','提取','规划','评价','指出','给出','整理','挑选','打分','审阅','批改','校对','判断','说明','列出','回答','谈谈','介绍'];
+var STRONG_L = ['不要','避免','禁止','仅限','只针对','不含','不能','不得超过','删掉','去掉'];
+var WEAK_L = ['简短','专业','通俗','详细','深入','精炼','简单'];
+var FMT_W = ['表格','分点','列点','清单','大纲','框架','三段','四部分','逐条','JSON','Markdown','代码','段落','标题','对比'];
+var FMT_WEAK = ['有条理','清晰','规范','结构清楚','逻辑清楚'];
+var SELF_W = ['我是','我们','我的专业','我在读','这门课','老师要求','上次','目前','我的方向'];
+var MATE_W = ['下面','以下','附件','原文','上文','这是我','这份','以上'];
+var PURE_W = ['为了','打算','准备','想用','要交','用于','目的是','用来'];
+var QUANT_RE = /(\d+|[一二三四五六七八九十]{1,3})\s*(字|条|页|个|分钟|部分|段|句|点|行)/;
+
+function hitAny(t, arr){ for(var i=0;i<arr.length;i++){ if(t.indexOf(arr[i])>=0) return arr[i]; } return ""; }
+function countAny(t, arr){ var c=0; for(var i=0;i<arr.length;i++){ if(t.indexOf(arr[i])>=0) c++; } return c; }
+function clip(t, w){ var p = t.indexOf(w); if(p<0) return t.slice(0,18); return t.slice(Math.max(0,p-4), Math.min(t.length, p+w.length+6)); }
+function analyze(raw, scene){
+  var t = raw.replace(/\s+/g,' ').trim();
+  var ev = {role:"",task:"",cons:"",fmt:"",ctx:""};
+  var s = {role:0,task:0,cons:0,fmt:0,ctx:0};
+
+  var rw = hitAny(t, ROLE_W);
+  if(rw){ s.role = 20; ev.role = clip(t, rw); }
+  else if(ROLE_RE.test(t)){ s.role = 10; ev.role = t.match(ROLE_RE)[0]; }
+  else { var fw = hitAny(t, FIELD_W); if(fw){ s.role = 10; ev.role = clip(t, fw); } }
+
+  var vlist = [];
+  for(var i=0;i<VERB_W.length;i++){ if(t.indexOf(VERB_W[i])>=0) vlist.push(VERB_W[i]); }
+  if(vlist.length === 0){ s.task = 0; }
+  else {
+    var v = vlist[0];
+    var after = t.slice(t.indexOf(v) + v.length, t.indexOf(v) + v.length + 8);
+    var hasObj = after.replace(/[，,。；;、\s一下]/g,'').length > 1;
+    s.task = (vlist.length >= 3) ? 10 : (hasObj ? 20 : 10);
+    ev.task = clip(t, v);
+  }
+
+  if(QUANT_RE.test(t) || hitAny(t, STRONG_L)){ s.cons = 20; ev.cons = (t.match(QUANT_RE) ? t.match(QUANT_RE)[0] : hitAny(t, STRONG_L)); }
+  else { var wl = hitAny(t, WEAK_L); if(wl){ s.cons = 10; ev.cons = clip(t, wl); } }
+
+  var fm = hitAny(t, FMT_W);
+  if(fm || FMT_RE_HIT(t)){ s.fmt = 20; ev.fmt = fm || t.match(FMT_RE_HIT.re)[0]; }
+  else { var fwk = hitAny(t, FMT_WEAK); if(fwk){ s.fmt = 10; ev.fmt = clip(t, fwk); } }
+
+  var cats = 0, cw = "";
+  if(hitAny(t, SELF_W)){ cats++; cw = cw || hitAny(t, SELF_W); }
+  if(hitAny(t, MATE_W)){ cats++; cw = cw || hitAny(t, MATE_W); }
+  if(hitAny(t, PURE_W)){ cats++; cw = cw || hitAny(t, PURE_W); }
+  s.ctx = cats >= 2 ? 20 : (cats === 1 ? 10 : 0);
+  ev.ctx = cw ? clip(t, cw) : "";
+
+  var total = s.role + s.task + s.cons + s.fmt + s.ctx;
+  var type = total >= 86 ? 4 : (total >= 61 ? 3 : (total >= 31 ? 2 : 1));
+  return { raw:raw, scene:scene, s:s, ev:ev, total:total, type:type, verbs:vlist };
+}
+var FMT_RE = /((分|按).{0,3}(点|段|部分|条|块)|用.{0,6}表格|列.{0,2}条)/;
+function FMT_RE_HIT(t){ return FMT_RE.test(t); }
+FMT_RE_HIT.re = FMT_RE;
+
+var LABEL = { role:"角色设定", task:"目标明确", cons:"约束条件", fmt:"输出格式", ctx:"背景上下文" };
+var WHY = {
+  role:"没有身份，AI 只能以通用助手口气回答，专业度上不来。",
+  task:"动作模糊，AI 只能猜你想干什么，猜错就得返工。",
+  cons:"没有限制，篇幅和范围全凭它发挥。",
+  fmt:"不指定格式，拿到的是一段散文，还得自己再整理。",
+  ctx:"背景不足，它不知道你的专业、进度和已有材料，只能给通用答案。"
+};
+
+function buildOpt(res){
+  var tpl = SCENES[res.scene] || SCENES["其他问题"];
+  var raw = res.raw.trim().replace(/^(帮我|请帮我|请你|帮我看看)\s*/,"").trim();
+  var parts = [];
+  var add = function(t){ parts.push({k:"add", t:t}); };
+  var keep = function(t){ parts.push({k:"keep", t:t}); };
+
+  add("你是" + tpl.role + "。\n");
+  if(res.s.ctx < 20) add("我的情况：【年级专业 / 课程要求 / 已有材料，一句就行】\n");
+  if(res.s.task >= 20){ add("我的请求是："); keep(raw); add("\n"); }
+  else { add("我的请求是："); keep(raw); add("\n（补一句你要的具体产出：一段提纲、三条建议、还是一份对照表）\n"); }
+  if(res.s.cons < 20) add("要求：" + tpl.cons + "。\n");
+  if(res.s.fmt < 20) add("输出格式：" + tpl.fmt + "。\n");
+  add("如果不确定，请先说明你的假设，不要凭空补细节。");
+  return parts;
+}
+function typeMeta(t){
+  return {1:["裸问型","t1"],2:["模糊型","t2"],3:["半结构化","t3"],4:["结构完整","t4"]}[t];
+}
+var KEYS = ["role","task","cons","fmt","ctx"];
+var SHORT = {role:"角色",task:"目标",cons:"约束",fmt:"格式",ctx:"背景"};
+
+function verdictOf(res){
+  var low = KEYS.filter(function(k){ return res.s[k] < 20; });
+  if(!low.length) return "五项都写全了，这条基本可以直接用。再补一句“先说明假设、不要编造”，会更稳。";
+  var names = low.map(function(k){ return SHORT[k]; });
+  return "你缺的是" + names.join("、") + "。先把「" + names[0] + "」这一项补上，变化最明显。";
+}
+
+function alertsOf(res){
+  var a = [], t = res.raw;
+  if(/(帮我.{0,4}(写完|全文|整篇)|直接给.{0,3}一篇|代写|全文生成)/.test(t))
+    a.push(["bad","检测到代写意图。好问吗不代写，建议改成：“给我三个框架，我自己挑一个写”或“按这四条标准给我的草稿打反馈”。"]);
+  if(res.verbs.length >= 3)
+    a.push(["warn","这一句里塞了 " + res.verbs.length + " 个任务。拆开分三次问，每次结果都会更具体。"]);
+  if(t.trim().length < 15)
+    a.push(["warn","输入太短，这么短的话通常至少缺三项结构。"]);
+  if(/越短越好|越简越好/.test(t) && /详细|展开|深入/.test(t))
+    a.push(["warn","“越短越好”和“详细展开”互相冲突，AI 只能自己选一边。"]);
+  return a;
+}
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function highlight(text, snip){
+  if(!snip) return esc(text);
+  var p = text.indexOf(snip);
+  if(p < 0) return esc(text);
+  return esc(text.slice(0,p)) + "<mark>" + esc(snip) + "</mark>" + esc(text.slice(p + snip.length));
+}
+
+function drawRadar(vals){
+  var c = $("radar"); if(!c) return;
+  var w = c.clientWidth || 320;
+  if(!w) return;
+  var h = Math.round(w * 0.74);
+  var dpr = window.devicePixelRatio || 1;
+  c.width = w * dpr; c.height = h * dpr;
+  c.style.height = h + "px";
+  var g = c.getContext("2d");
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,w,h);
+  var cx = w/2, cy = h/2 + 2, R = Math.min(w,h) * 0.32;
+  var start = -Math.PI/2, names = ["角色","目标","约束","格式","背景"];
+  for(var ring=1; ring<=4; ring++){
+    g.beginPath();
+    for(var i=0;i<=5;i++){
+      var a = start + i*Math.PI*2/5, r = R*ring/4;
+      var x = cx + Math.cos(a)*r, y = cy + Math.sin(a)*r;
+      if(i) g.lineTo(x,y); else g.moveTo(x,y);
+    }
+    g.strokeStyle = ring===4 ? "#D5DAE1" : "#EDEFF2";
+    g.lineWidth = 1; g.stroke();
+  }
+  g.font = "12px system-ui,sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+  for(var i=0;i<5;i++){
+    var a = start + i*Math.PI*2/5;
+    g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+Math.cos(a)*R, cy+Math.sin(a)*R);
+    g.strokeStyle = "#EDEFF2"; g.stroke();
+    g.fillStyle = "#6B7280";
+    g.fillText(names[i], cx+Math.cos(a)*(R+21), cy+Math.sin(a)*(R+15));
+  }
+  var pts = vals.map(function(v,i){
+    var a = start + i*Math.PI*2/5, r = R*Math.max(0,Math.min(1,v/20));
+    return [cx+Math.cos(a)*r, cy+Math.sin(a)*r];
+  });
+  g.beginPath();
+  pts.forEach(function(p,i){ if(i) g.lineTo(p[0],p[1]); else g.moveTo(p[0],p[1]); });
+  g.closePath();
+  g.fillStyle = "rgba(31,58,95,.14)"; g.fill();
+  g.strokeStyle = "#1F3A5F"; g.lineWidth = 2; g.stroke();
+  pts.forEach(function(p){
+    g.beginPath(); g.arc(p[0],p[1],3.2,0,Math.PI*2); g.fillStyle = "#1F3A5F"; g.fill();
+  });
+}
+var FIX = {
+  role:'加一句身份：“你是一位【领域】的【身份】”，例如“你是一位带过三届毕业生的统计学老师”。',
+  task:'把“帮我看看”换成“动作 + 对象 + 要什么”：请把这段摘要压到 150 字，保留方法和结论。',
+  cons:'补一条数得出来的限制：“不超过 300 字”“只针对本科生”“不要用某类词”。',
+  fmt:'指定呈现形式：“用表格输出，三列：问题、原因、改法”。',
+  ctx:'交代三件事：你的身份、课程或场景的要求、已有的材料或上次被指出的问题。'
+};
+
+function renderResult(){
+  var res = state.res;
+  $("r-total").innerHTML = res.total + '<small>/100</small>';
+  var tm = typeMeta(res.type);
+  var tag = $("r-tag");
+  tag.className = "tag " + tm[1];
+  tag.textContent = tm[0];
+  $("r-verdict").textContent = verdictOf(res);
+  var al = alertsOf(res);
+  $("r-alerts").innerHTML = al.map(function(x){ return '<div class="alert ' + x[0] + '">' + x[1] + "</div>"; }).join("");
+  $("r-items").innerHTML = KEYS.map(function(k){
+    var v = res.s[k];
+    var st = v === 20 ? ["full","明确"] : (v === 10 ? ["part","部分"] : ["none","缺失"]);
+    var color = v === 20 ? "#166534" : (v === 10 ? "#B45309" : "#B91C1C");
+    return '<div class="item" data-k="' + k + '"><div class="item-head">' +
+      '<span class="item-name">' + LABEL[k] + "</span>" +
+      '<span class="bar"><i style="width:' + (v * 5) + "%;background:" + color + '"></i></span>' +
+      '<span class="st ' + st[0] + '">' + st[1] + "</span></div>" +
+      '<div class="item-body">' +
+      (res.ev[k] ? '<div class="kv"><b>判定依据</b><p>' + highlight(res.raw, res.ev[k]) + "</p></div>" : "") +
+      '<div class="kv"><b>为什么重要</b><p>' + WHY[k] + "</p></div>" +
+      '<div class="kv"><b>怎么改</b><p>' + FIX[k] + "</p></div>" +
+      "</div></div>";
+  }).join("");
+  var lowKey = KEYS.slice().sort(function(a,b){ return res.s[a] - res.s[b]; })[0];
+  var lowEl = document.querySelector('.item[data-k="' + lowKey + '"]');
+  if(lowEl) lowEl.classList.add("open");
+  show("v-result");
+  setTimeout(function(){ drawRadar(KEYS.map(function(k){ return res.s[k]; })); }, 40);
+}
+function show(v){
+  ["v-input","v-result","v-opt","v-book"].forEach(function(id){
+    var el = $(id); if(el) el.classList.toggle("active", id === v);
+  });
+  window.scrollTo(0,0);
+}
+
+function buildRewrite(res){
+  var tpl = SCENES[res.scene] || SCENES["其他问题"];
+  var parts = [], add = function(t){ parts.push({k:"add",t:t}); }, keep = function(t){ parts.push({k:"keep",t:t}); };
+  add("你是" + tpl.role + "。\n");
+  add("任务："); keep(res.raw.trim()); add("\n");
+  add("请只围绕上面这一件事回答，不要扩展到别的任务。\n");
+  add("要求：\n1）" + tpl.cons + "；\n2）只使用我提供的材料和事实，缺的部分直接说缺；\n3）不确定的地方先说明假设，不要编造。\n");
+  add("输出格式：" + tpl.fmt + "。");
+  return parts;
+}
+
+var FOLLOW = {
+  "开题报告":["帮我把这个选题拆成三个可执行的小题目，并各说一个难点。","这个选题最可能被老师否掉的理由是什么？","按我现在的材料，哪一步最容易卡住？"],
+  "课程论文":["按上面的建议，先给我一个两段式的改写示例。","这篇文章的论证漏洞在哪一处最明显？","如果要补一条数据，最适合补什么？"],
+  "实验报告":["按你给的三段结构，帮我填第二段的框架。","我的数据里有没有异常值需要解释？","这个结论如果被质疑，最该先补哪项对照？"],
+  "教案设计":["把第二环节的活动再细化到分钟级。","这个设计对基础弱的学生会不会太难？","如果只有 20 分钟，砍掉哪一部分？"],
+  "英语写作":["把这五处改动排一个优先级，先改哪个？","我的分数卡在 6 分，最该补的是哪一项？","给我三个能替换的高级表达。"],
+  "其他问题":["上面第三条再具体一点，给一个能照做的步骤。","如果我的前提是错的，你会怎么反驳？","这个答案最容易被误用的地方在哪？"]
+};
+function renderOpt(){
+  var res = state.res;
+  var parts = state.tab === "light" ? buildOpt(res) : buildRewrite(res);
+  state.out = parts;
+  $("opt-text").innerHTML = parts.map(function(p){
+    return '<span class="' + p.k + '">' + esc(p.t) + "</span>";
+  }).join("");
+  var ch = [];
+  if(res.s.role < 20) ch.push("补了角色：给了 AI 一个具体身份，回答的视角会变。");
+  if(res.s.ctx < 20) ch.push("补了背景占位：你的专业、课程要求、已有材料。");
+  if(res.s.task < 20) ch.push("规范了任务句：保留你的原话，只在后面补一句“要什么产出”。");
+  if(res.s.cons < 20) ch.push("补了约束：字数、范围、禁止项。");
+  if(res.s.fmt < 20) ch.push("补了输出格式：让它按你要的样子排版。");
+  ch.push("加了防编造条款：不确定先说明，不要补细节。");
+  $("opt-changes").innerHTML = ch.map(function(x){ return "<li>" + x + "</li>"; }).join("");
+  var fo = FOLLOW[res.scene] || FOLLOW["其他问题"];
+  $("follow-list").innerHTML = fo.map(function(t){
+    return '<div class="follow-item" data-t="' + esc(t) + '"><i>问</i>' + esc(t) + "</div>";
+  }).join("");
+  show("v-opt");
+}
+var KEY = "haowenma.records.v1";
+function loadRec(){ try{ return JSON.parse(localStorage.getItem(KEY) || "[]"); }catch(e){ return []; } }
+function saveRec(list){ try{ localStorage.setItem(KEY, JSON.stringify(list.slice(0,40))); }catch(e){} }
+function fmtTime(ts){
+  var d = new Date(ts);
+  return (d.getMonth()+1) + "/" + d.getDate() + " " + ("0"+d.getHours()).slice(-2) + ":" + ("0"+d.getMinutes()).slice(-2);
+}
+function pushRec(res, adopted){
+  var list = loadRec();
+  list.unshift({ t:Date.now(), scene:res.scene, raw:res.raw, total:res.total, type:res.type, adopted:!!adopted });
+  saveRec(list);
+}
+
+function drawTrend(list){
+  var c = $("trend"); if(!c) return;
+  var w = c.clientWidth || 320; if(!w) return;
+  var h = 92, dpr = window.devicePixelRatio || 1;
+  c.width = w*dpr; c.height = h*dpr; c.style.height = h + "px";
+  var g = c.getContext("2d");
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,w,h);
+  var pad = 16, n = Math.min(list.length, 12);
+  g.strokeStyle = "#EDEFF2"; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(pad, h-pad); g.lineTo(w-pad, h-pad); g.stroke();
+  if(n < 2){ g.fillStyle="#9CA3AF"; g.font="12px system-ui"; g.fillText("再检查两次，就能看到走势", pad+2, h/2); return; }
+  var data = list.slice(0,n).reverse();
+  var step = (w - pad*2) / (n-1);
+  var pts = data.map(function(d,i){
+    return [pad + i*step, h - pad - (d.total/100) * (h - pad*2)];
+  });
+  g.beginPath();
+  pts.forEach(function(p,i){ if(i) g.lineTo(p[0],p[1]); else g.moveTo(p[0],p[1]); });
+  g.strokeStyle = "#1F3A5F"; g.lineWidth = 2; g.stroke();
+  pts.forEach(function(p){
+    g.beginPath(); g.arc(p[0],p[1],3,0,Math.PI*2); g.fillStyle="#1F3A5F"; g.fill();
+  });
+  g.fillStyle = "#9CA3AF"; g.font = "11px system-ui";
+  g.fillText("结构分走势", pad, 14);
+}
+function renderBook(){
+  var list = loadRec();
+  if(!list.length){
+    $("book-list").innerHTML = '<div class="book-empty">还没有记录。<br>回去检查一句你平时会问的话。</div>';
+  } else {
+    $("book-list").innerHTML = list.map(function(r){
+      var tm = typeMeta(r.type);
+      return '<div class="rec"><div class="rec-top"><span class="s">' + r.total +
+        '<small style="font-size:12px;color:#6B7280;font-weight:400">/100</small></span>' +
+        '<span class="tag ' + tm[1] + '" style="font-size:11px;padding:3px 9px">' + tm[0] + "</span></div>" +
+        '<p class="rec-raw">' + esc(r.raw) + "</p>" +
+        '<div class="rec-meta">' + esc(r.scene||"—") + " · " + fmtTime(r.t) + (r.adopted ? " · 已采纳优化版" : "") + "</div></div>";
+    }).join("");
+  }
+  show("v-book");
+  setTimeout(function(){ drawTrend(list); }, 40);
+}
+var toastTimer = null;
+function toast(msg){
+  var el = $("toast");
+  el.textContent = msg;
+  el.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.classList.remove("on"); }, 1600);
+}
+function copyText(t){
+  var done = function(){ toast("已复制，可以直接粘给 AI"); markAdopted(); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(done).catch(function(){ fallbackCopy(t, done); });
+  } else fallbackCopy(t, done);
+}
+function fallbackCopy(t, cb){
+  var ta = document.createElement("textarea");
+  ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand("copy"); cb(); } catch(e){ toast("复制失败，请手动选中"); }
+  document.body.removeChild(ta);
+}
+function markAdopted(){
+  var list = loadRec();
+  if(list.length){ list[0].adopted = true; saveRec(list); }
+}
+function txtOf(parts){ return parts.map(function(p){ return p.t; }).join(""); }
+var inputEl = $("input"), checkBtn = $("btn-check"), countEl = $("count");
+
+inputEl.addEventListener("input", function(){
+  var n = inputEl.value.trim().length;
+  countEl.textContent = n + " 字";
+  countEl.classList.toggle("low", n > 0 && n < 15);
+  checkBtn.disabled = n === 0;
+});
+
+$("scenes").addEventListener("click", function(e){
+  var el = e.target.closest(".scene");
+  if(!el) return;
+  Array.prototype.forEach.call(this.children, function(c){ c.classList.remove("on"); });
+  el.classList.add("on");
+  state.scene = el.getAttribute("data-s");
+});
+
+checkBtn.addEventListener("click", function(){
+  state.raw = inputEl.value;
+  state.res = analyze(state.raw, state.scene || "其他问题");
+  pushRec(state.res, false);
+  renderResult();
+});
+
+$("back-input").addEventListener("click", function(){ show("v-input"); });
+$("back-input2").addEventListener("click", function(){ show("v-input"); });
+$("back-res").addEventListener("click", function(){ show("v-result"); });
+
+$("r-items").addEventListener("click", function(e){
+  var h = e.target.closest(".item-head");
+  if(h) h.parentNode.classList.toggle("open");
+});
+$("btn-opt").addEventListener("click", function(){
+  state.tab = "light";
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
+    t.classList.toggle("on", t.getAttribute("data-t") === "light");
+  });
+  renderOpt();
+});
+
+Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
+  t.addEventListener("click", function(){
+    Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(x){ x.classList.remove("on"); });
+    t.classList.add("on");
+    state.tab = t.getAttribute("data-t");
+    renderOpt();
+  });
+});
+
+$("btn-copy").addEventListener("click", function(){ copyText(txtOf(state.out)); });
+
+$("btn-recheck").addEventListener("click", function(){
+  inputEl.value = txtOf(state.out);
+  inputEl.dispatchEvent(new Event("input"));
+  state.raw = inputEl.value;
+  state.res = analyze(state.raw, state.scene || "其他问题");
+  pushRec(state.res, false);
+  renderResult();
+});
+
+$("follow-list").addEventListener("click", function(e){
+  var el = e.target.closest(".follow-item");
+  if(!el) return;
+  inputEl.value = el.getAttribute("data-t");
+  inputEl.dispatchEvent(new Event("input"));
+  toast("已填进输入框，可直接检查");
+  show("v-input");
+});
+
+$("btn-book").addEventListener("click", renderBook);
+$("btn-clear").addEventListener("click", function(){
+  inputEl.value = ""; inputEl.dispatchEvent(new Event("input"));
+});
+$("btn-export").addEventListener("click", function(){
+  var list = loadRec();
+  if(!list.length){ toast("还没有记录"); return; }
+  var rows = [["时间","场景","结构分","类型","是否采纳","原句"]];
+  list.forEach(function(r){
+    rows.push([fmtTime(r.t), r.scene || "", r.total, typeMeta(r.type)[0], r.adopted ? "是" : "否", r.raw || ""]);
+  });
+  var csv = rows.map(function(r){
+    return r.map(function(c){ return '"' + String(c).replace(/"/g,"\"\"") + '"'; }).join(",");
+  }).join("\r\n");
+  var blob = new Blob(["\ufeff" + csv], { type:"text/csv;charset=utf-8" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "好问吗-记录.csv";
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 800);
+});
+
+$("btn-wipe").addEventListener("click", function(){
+  if(!loadRec().length){ toast("本来就是空的"); return; }
+  if(confirm("清空本机所有记录？此操作不可恢复。")){
+    saveRec([]);
+    renderBook();
+    toast("已清空");
+  }
+});
+var SAMPLES = [
+  { tag:"裸问", scene:"课程论文", text:"帮我写个论文引言" },
+  { tag:"半结构", scene:"课程论文", text:"你是一位期刊审稿人，请从数据可靠性角度评估下面的结果，指出最可能被质疑的三个点，用分点列出" },
+  { tag:"多任务", scene:"开题报告", text:"帮我选题、写大纲，再给我参考文献" },
+  { tag:"完整", scene:"课程论文", text:"你是一位带过三届毕业生的统计学老师。我是大二数据科学专业，这门课要求 2000 字课程论文，上一版被老师批“没有数据支撑”。请帮我评估下面这个摘要的问题，指出最该改的三处。要求：不超过 300 字，只针对本科课程论文，不要用套话。输出格式：分三部分，每部分不超过 3 条。" }
+];
+
+(function init(){
+  var sl = $("sample-list");
+  sl.innerHTML = SAMPLES.map(function(s,i){
+    return '<div class="sample-item" data-i="' + i + '"><b>' + s.tag + "</b> " + esc(s.text) + "</div>";
+  }).join("");
+  sl.addEventListener("click", function(e){
+    var el = e.target.closest(".sample-item");
+    if(!el) return;
+    var s = SAMPLES[+el.getAttribute("data-i")];
+    inputEl.value = s.text;
+    inputEl.dispatchEvent(new Event("input"));
+    Array.prototype.forEach.call($("scenes").children, function(c){
+      c.classList.toggle("on", c.getAttribute("data-s") === s.scene);
+    });
+    state.scene = s.scene;
+    toast("已填入，点“检查我的提问”试试");
+  });
+})();
+</script>
+</body>
+</html>
